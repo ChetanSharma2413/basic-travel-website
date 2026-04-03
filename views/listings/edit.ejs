@@ -1,0 +1,95 @@
+<%layout("layouts/boilerplate")%>
+<div>
+  <h3>List your place</h3>
+  <p>Fill in the details below to create your listing on Roamly</p>
+  <div class="form">
+    <form action="/listings/<%= listing._id %>?_method=PUT" method="POST" novalidate class="needs-validation">
+      <!-- listing title input -->
+      <div class="mb-3">
+        <label for="title" class="form-label">Listing title</label>
+        <input
+          name="listing[title]"
+          placeholder="Add a catchy title"
+          type="text"
+          class="form-control"
+          required
+          value="<%= listing.title %>"
+        />
+        <div class="valid-feedback">Title looks good!</div>
+      </div>
+
+      <!-- listing title description -->
+      <div class="mb-3">
+        <label for="description" class="form-label">Description</label>
+        <input
+          name="listing[description]"
+          placeholder="Add a catchy title"
+          type="text"
+          class="form-control"
+          value="<%= listing.description %>"
+          required
+        />
+        <div class="valid-feedback">Title looks good!</div>
+      </div>
+
+      <!-- Image url -->
+      <div class="mb-3">
+        <label for="image" class="form-label">Upload Listing Image URL</label>
+        <input
+          name="listing[image][url]"
+          type="text"
+          class="form-control"
+          placeholder="Enter the link"
+          value="<%= listing.image.url %>"
+          required
+        />
+      </div>
+
+      <!-- price-->
+      <div class="row">
+        <div class="mb-3 col-md-4">
+          <label for="price" class="form-label">Price</label>
+          <input
+            name="listing[price]"
+            type="number"
+            placeholder="1200"
+            class="form-control"
+            value="<%= listing.price %>"
+            required
+          />
+          <div class="invalid-feedback">Please Enter a valid price</div>
+        </div>
+
+        <!-- country -->
+        <div class="mb-3 col-md-8">
+          <label for="country" class="form-label">Country</label>
+          <input
+            name="listing[country]"
+            placeholder="India"
+            type="text"
+            class="form-control"
+            value="<%= listing.country%>"
+            required
+          />
+          <div class="invalid-feedback">Country name should be valid</div>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label for="location" class="form-label">Location</label>
+        <input
+          name="listing[location]"
+          placeholder="Jaiput , Rajasthan"
+          type="text"
+          class="form-control"
+          value="<%= listing.location %>"
+          required
+        />
+        <div class="invalid-feedback">Location should be valid</div>
+      </div>
+
+      <!-- Submit button -->
+       <button type="submit">Edit</button>
+    </form>
+  </div>
+</div>

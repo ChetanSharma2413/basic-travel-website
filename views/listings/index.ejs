@@ -1,0 +1,18 @@
+<% layout('/layouts/boilerplate') %>
+
+<div>
+    <% for(let listing  of listings ) { %>
+    <a href="/listings/<%= listing.id %>" style="text-decoration: none;">
+        <div style="background-color: rgb(169, 239, 169);">
+            <p> <%= listing._id %> </p>
+            <p> <%= listing.title %> </p>
+            <p> <%= listing.description %> </p>
+            <img src="<%= listing.image.url %> " alt="villa image" height="100px">
+            <p> <%= listing.image.url %> </p>
+            <p> <%= listing.price %> </p>
+            <p> <%= listing.location %> </p>
+            <p> <%= listing.country %> </p>  
+        </div>
+    </a>
+    <% } %> 
+</div>
