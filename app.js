@@ -11,13 +11,18 @@ app.use(express.urlencoded({extended:true}));
 app.use(express.json());
 app.use(methodOverride("_method"));
 app.use(express.static(path.join(__dirname , "/public")));
+const session = require("express-session");
+const MongoStore = require('connect-mongo').default;
+const flash = require("connect-flash");
+const passport = require("passport");
+const LocalStrategy = require("passport-local");
+const User = require("./models/user.js");
 
 
 const Listing = require("./models/listing.js");
 const wrapAsync = require("./utils/wrapAsync.js");
 const ExpressError = require("./utils/ExpressError.js");
-const {listingSchema}= require("./schema.js");
-const validateListing = require("./middleware.js")
+const validateListing = require("./middleware.js");
 
 
 //-------------------------------------1 Database Connection--------------------------------------------
@@ -35,6 +40,40 @@ async function main() {
   await mongoose.connect(dbURL);
 }
 //----------------------------------------1-----------------------------------------
+
+const sessionOptions = {
+    store: MongoStore.create({
+        mongoUrl: dbURL,
+        crypto: {
+            secret: "secret-code",
+        },
+        touchAfter: 24 * 3600,
+    }),
+    secret: "secret-code",
+    resave: false,
+    saveUninitialized: true,
+    cookie: {
+        expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        httpOnly: true,
+    },
+};
+
+app.use(session(sessionOptions));
+app.use(flash());
+
+app.use(passport.initialize())
+app.use(passport.session())
+passport.use(new LocalStrategy(User.authenticate()))
+passport.serializeUser(User.serializeUser())
+passport.deserializeUser(User.deserializeUser())
+
+app.use((req, res, next) => {
+    res.locals.success = req.flash("success");
+    res.locals.error = req.flash("error");
+    res.locals.currUser = req.user;
+    next();
+});
 
 app.get("/" , (req, res) => {
     res.send("Hi, i am root.");
@@ -97,6 +136,48 @@ app.delete("/listings/:id" , wrapAsync(async(req, res) =>{
     console.log(` deleted listing is :-  ${deletedListing}`);
     res.redirect(`/listings`);
 }));
+
+//Signup rendere form
+app.get("/signup" , (req , res,  next) => {
+    res.render("users/signup.ejs");
+});
+
+app.post("/signup" , wrapAsync(async(req, res , next) => {
+    const {username, email , password} = req.body;
+    const user = new User({username ,email});
+    //Register hashes the password and saves the user
+    const registeredUser = await User.register(user, password);
+    req.login(registeredUser , (err) => {
+        if (err) {
+          return next(err);
+        }else {
+            req.flash("success", "Welcome to Wanderlust! ");
+            res.redirect("/listings")
+            console.log("Login Succesful");
+        }
+    })
+    console.log(`${username} and its email is ${email} and password is ${password}`);
+}))
+
+//login render form
+app.get("/login" , (req , res,  next) => {
+    res.render("users/login.ejs");
+});
+
+app.post("/login" ,passport.authenticate("local") , async(req, res, next) => {
+        console.log("Login Done");
+        res.redirect("/login")
+});
+
+app.get("/logout" , (req, res, next) => {
+    req.logout((err) => {
+    if (err) {
+      return next(err);
+    }
+    res.redirect("/listings");
+    console.log("LogOut Done");
+  })
+})
 
 //Catch all Route 
 app.all(/.*/ , (req, res , next) => {
