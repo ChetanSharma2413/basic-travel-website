@@ -12,7 +12,9 @@
     />
   </head>
   <body>
-    <%-include('../includes/navbar.ejs') %> <%- body %>
+    <%-include('../includes/navbar.ejs') %> 
+    <%- include('../includes/flash.ejs') %>
+    <%- body %>
     <%-include('../includes/footer.ejs') %>
 
     <script
