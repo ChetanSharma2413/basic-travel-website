@@ -17,11 +17,21 @@ const flash = require("connect-flash");
 const passport = require("passport");
 const LocalStrategy = require("passport-local");
 const User = require("./models/user.js");
+// const Schema = require("/schema.js")
 
 const Listing = require("./models/listing.js");
+const Review = require("./models/review.js");
 const wrapAsync = require("./utils/wrapAsync.js");
 const ExpressError = require("./utils/ExpressError.js");
-const validateListing = require("./middleware.js");
+
+const {
+  validateListing,
+  isLoggedIn,
+  saveRedirectUrl,
+  isOwner,
+  validateReview,
+  isReviewAuthor
+} = require("./middleware.js");
 
 //-------------------------------------1 Database Connection--------------------------------------------
 //Connection to database
@@ -87,7 +97,7 @@ app.get(
 );
 
 //New Route
-app.get("/listings/new", (req, res) => {
+app.get("/listings/new", isLoggedIn, (req, res) => {
   res.render("listings/new.ejs");
 });
 
@@ -96,7 +106,14 @@ app.get(
   "/listings/:id",
   wrapAsync(async (req, res) => {
     let { id } = req.params;
-    const listing = await Listing.findById(id);
+    const listing = await Listing.findById(id)
+    .populate({
+        path: "reviews",
+        populate: {
+            path: "author"
+        } 
+    })
+    .populate("owner");
     res.render("listings/show.ejs", { listing });
   }),
 );
@@ -104,6 +121,7 @@ app.get(
 //Create Route
 app.post(
   "/listings",
+  isLoggedIn,
   validateListing,
   wrapAsync(async (req, res) => {
     const url = req.body.listing.image.url;
@@ -111,9 +129,10 @@ app.post(
     const listing = req.body.listing;
     const newListing = new Listing(listing);
     newListing.image = { url, filename };
+    newListing.owner = req.user._id;
     await newListing.save();
     console.log("New Listing Created");
-    req.flash("success" , "Listing Created");
+    req.flash("success", "Listing Created");
     res.redirect("/listings");
   }),
 );
@@ -121,6 +140,8 @@ app.post(
 //Edit Route
 app.get(
   "/listings/:id/edit",
+  isLoggedIn,
+  isOwner,
   wrapAsync(async (req, res) => {
     const { id } = req.params;
     const listing = await Listing.findById(id);
@@ -131,6 +152,8 @@ app.get(
 //Update Route
 app.put(
   "/listings/:id",
+  isLoggedIn,
+  isOwner,
   validateListing,
   wrapAsync(async (req, res) => {
     const url = req.body.listing.image.url;
@@ -148,6 +171,8 @@ app.put(
 //Delete Route
 app.delete(
   "/listings/:id",
+  isLoggedIn,
+  isOwner,
   wrapAsync(async (req, res) => {
     const { id } = req.params;
     const deletedListing = await Listing.findByIdAndDelete(id);
@@ -161,6 +186,7 @@ app.delete(
 app.get("/signup", (req, res, next) => {
   res.render("users/signup.ejs");
 });
+
 //Sign up post form
 app.post(
   "/signup",
@@ -189,17 +215,18 @@ app.get("/login", (req, res, next) => {
   res.render("users/login.ejs");
 });
 
-//login post request 
+//login post request
 app.post(
   "/login",
+  saveRedirectUrl,
   passport.authenticate("local", {
     failureRedirect: "/login",
     failureFlash: true,
   }),
   async (req, res, next) => {
     req.flash("success", "Welcome Back");
-    console.log("Login Done");
-    res.redirect("/listings");
+    let redirectUrl = res.locals.redirectUrl || "/listings";
+    res.redirect(redirectUrl);
   },
 );
 
@@ -213,6 +240,30 @@ app.get("/logout", (req, res, next) => {
     res.redirect("/listings");
     console.log("LogOut Done");
   });
+});
+
+// Create Review Route
+app.post("/listings/:id/reviews", isLoggedIn, validateReview , async(req, res, next) => {
+  let listing = await Listing.findById(req.params.id);
+  let newReview = new Review(req.body.review);
+  newReview.author = req.user._id;
+  listing.reviews.push(newReview);
+
+  await newReview.save();
+  await listing.save();
+
+  req.flash("success" , "New Review Created");
+  res.redirect(`/listings/${listing._id}`);
+});
+
+//Delete a Review Route
+app.delete("/listings/:id/reviews/:reviewId",isLoggedIn , isReviewAuthor , async(req, res, next) => {
+  let {id , reviewId } = req.params;
+  await Listing.findByIdAndUpdate(id , {$pull: {reviews:reviewId}});
+  await Review.findByIdAndDelete(reviewId);
+
+  req.flash("success" , "Review Deleted");
+  res.redirect(`/listings/${id}`);
 });
 
 //Catch all Route

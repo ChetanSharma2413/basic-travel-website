@@ -1,4 +1,10 @@
 <% layout("layouts/boilerplate") %>
+<style >
+  .review {
+    background-color: grey;
+    margin-bottom: 10px;
+  }
+</style>
 
 <h3><%= listing.title %></h3>
 <img src="<%= listing.image.url %>" alt="Villa image" height="350px" />
@@ -6,7 +12,49 @@
 <p>&#8377;<%= listing.price.toLocaleString("en-IN") %></p>
 <p><%= listing.location%></p>
 <p><%= listing.country%></p>
-<a href="/listings/<%= listing._id %>/edit">Edit</a>
+<p>Owned by:- <%= listing.owner.username %></p>
+<% if(currUser && listing.owner._id.equals(currUser._id)) { %>
+  <a href="/listings/<%= listing._id %>/edit">Edit</a>
 <form method="post" action="/listings/<%=listing._id%>?_method=DELETE">
   <button>Delete</button>
 </form>
+<% } %>
+
+
+<hr>
+
+
+<% if(currUser) { %>
+<h3>Leave a Review</h3>
+<form method="post" action="/listings/<%= listing._id %>/reviews">
+  <div class="mb-3 mt-3">
+    <label for="comment" class="form-label">Comments</label>
+    <textarea name="review[comment]" id="comment" cols="30" rows="5" class="form-control"
+    required></textarea>
+    <div class="invalid-feedback">Please submit some comments for reviews</div>
+  </div>
+  <div>
+    <label for="rating">Rating</label>
+    <input type="number" id="rating" name="review[rating]">
+  </div>
+    <button class="btn btn-outline-dark">Submit</button>
+</form>
+<% } %>
+
+<% if(listing.reviews.length > 0) { %>
+<div class="reviews">
+  <h3>All reviews</h3>
+  <% for( review of listing.reviews) { %>
+    <div class="review" >
+      <p> Comment is : <%= review.comment %></p>
+      <p> Rating is : <%= review.rating %></p>
+      <p> Rating is given by : <%= review.author.username %></p>
+      <% if(currUser && currUser._id.equals(review.author._id)) { %>
+        <form action="/listings/<%= listing._id %>/reviews/<%= review._id %>?_method=DELETE" method="post">
+          <button>Delete</button>
+        </form>
+      <% } %>
+    </div>
+  <% } %>
+</div>
+<% } %>
